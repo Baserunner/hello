@@ -5,13 +5,18 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 func helloHandler(w http.ResponseWriter, r *http.Request) {
 	response := os.Getenv("RESPONSE")
 	if len(response) == 0 {
-		response = "Hello from "
-		response += " IP Address: " + getCurrentIPAddress()
+		response = "You are using the following network interfaces: \n\n"
+		response += getAllNetworkInterfaces()
+		response += "\n\n"
+		response += "Your current IP address is: " + getCurrentIPAddress() + "\n"
 	}
 
 	fmt.Fprintln(w, response)
@@ -27,19 +32,49 @@ func listenAndServe(port string) {
 }
 
 func getCurrentIPAddress() string {
-	addrs, err := net.InterfaceAddrs()
+	interfaces, err := net.Interfaces()
 	if err != nil {
 		panic(err)
 	}
 
-	for _, addr := range addrs {
-		ipNet, ok := addr.(*net.IPNet)
-		if ok && !ipNet.IP.IsLoopback() && ipNet.IP.To4() != nil {
-			return ipNet.IP.String()
+	for _, iface := range interfaces {
+		if strings.HasPrefix(iface.Name, "Ethernet") {
+			addrs, err := iface.Addrs()
+			if err != nil {
+				continue
+			}
+			for _, addr := range addrs {
+				ipNet, ok := addr.(*net.IPNet)
+				if ok && ipNet.IP.To4() != nil {
+					logrus.Infof("Found Ethernet interface: %s with IP: %s", iface.Name, addr.String())
+					return ipNet.IP.String()
+				}
+			}
 		}
 	}
-
 	return ""
+}
+
+func getAllNetworkInterfaces() string {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		panic(err)
+	}
+
+	var result string
+	for _, iface := range interfaces {
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+		for _, addr := range addrs {
+			ipNet, ok := addr.(*net.IPNet)
+			if ok && ipNet.IP.To4() != nil {
+				result += fmt.Sprintf("Interface: %s, IP: %s\n", iface.Name, ipNet.IP.String())
+			}
+		}
+	}
+	return result
 }
 
 func main() {
