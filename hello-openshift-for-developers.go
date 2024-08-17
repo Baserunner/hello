@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -53,6 +54,11 @@ func getCurrentIPAddress() string {
 		}
 	}
 	return ""
+}
+
+func sayHello() {
+	fmt.Println("Hallo Ute")
+	fmt.Println("The current time is:", time.Now().Format("15:04:05"))
 }
 
 func getAllNetworkInterfaces() string {
