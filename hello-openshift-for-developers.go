@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 )
@@ -10,6 +11,7 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 	response := os.Getenv("RESPONSE")
 	if len(response) == 0 {
 		response = "Hello OpenShift for Developers!"
+		response += " IP Address: " + getCurrentIPAddress()
 	}
 
 	fmt.Fprintln(w, response)
@@ -22,6 +24,22 @@ func listenAndServe(port string) {
 	if err != nil {
 		panic("ListenAndServe: " + err.Error())
 	}
+}
+
+func getCurrentIPAddress() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		panic(err)
+	}
+
+	for _, addr := range addrs {
+		ipNet, ok := addr.(*net.IPNet)
+		if ok && !ipNet.IP.IsLoopback() && ipNet.IP.To4() != nil {
+			return ipNet.IP.String()
+		}
+	}
+
+	return ""
 }
 
 func main() {
